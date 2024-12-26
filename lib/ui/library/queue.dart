@@ -5,13 +5,10 @@
 import 'package:anytime/bloc/podcast/queue_bloc.dart';
 import 'package:anytime/l10n/L.dart';
 import 'package:anytime/state/queue_event_state.dart';
-import 'package:anytime/ui/widgets/action_text.dart';
-import 'package:anytime/ui/widgets/draggable_episode_tile.dart';
 import 'package:anytime/ui/widgets/episode_tile.dart';
 import 'package:anytime/ui/widgets/platform_progress_indicator.dart';
 import 'package:anytime/ui/widgets/tile_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dialogs/flutter_dialogs.dart';
 import 'package:provider/provider.dart';
 
 /// This class is responsible for rendering the Up Next queue feature.
