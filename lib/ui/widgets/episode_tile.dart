@@ -5,7 +5,6 @@
 import 'package:anytime/bloc/podcast/audio_bloc.dart';
 import 'package:anytime/bloc/podcast/episode_bloc.dart';
 import 'package:anytime/bloc/podcast/podcast_bloc.dart';
-import 'package:anytime/bloc/podcast/queue_bloc.dart';
 import 'package:anytime/entities/downloadable.dart';
 import 'package:anytime/entities/episode.dart';
 import 'package:anytime/l10n/L.dart';
@@ -200,7 +199,6 @@ class _CupertinoAccessibleEpisodeTileState extends State<_CupertinoAccessibleEpi
     final audioBloc = Provider.of<AudioBloc>(context, listen: false);
     final episodeBloc = Provider.of<EpisodeBloc>(context);
     final podcastBloc = Provider.of<PodcastBloc>(context);
-    final queueBloc = Provider.of<QueueBloc>(context);
 
     return StreamBuilder<_PlayerControlState>(
         stream: Rx.combineLatest2(audioBloc.playingState!, audioBloc.nowPlaying!,
