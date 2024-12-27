@@ -6,25 +6,18 @@ import 'dart:async';
 
 import 'package:anytime/bloc/podcast/podcast_bloc.dart';
 import 'package:anytime/bloc/settings/settings_bloc.dart';
-import 'package:anytime/entities/episode.dart';
 import 'package:anytime/entities/feed.dart';
 import 'package:anytime/entities/podcast.dart';
 import 'package:anytime/l10n/L.dart';
 import 'package:anytime/state/bloc_state.dart';
-import 'package:anytime/ui/podcast/funding_menu.dart';
 import 'package:anytime/ui/podcast/playback_error_listener.dart';
-import 'package:anytime/ui/podcast/podcast_context_menu.dart';
-import 'package:anytime/ui/podcast/podcast_episode_list.dart';
 import 'package:anytime/ui/widgets/action_text.dart';
 import 'package:anytime/ui/widgets/delayed_progress_indicator.dart';
-import 'package:anytime/ui/widgets/episode_filter_selector.dart';
-import 'package:anytime/ui/widgets/episode_sort_selector.dart';
 import 'package:anytime/ui/widgets/placeholder_builder.dart';
 import 'package:anytime/ui/widgets/platform_back_button.dart';
 import 'package:anytime/ui/widgets/platform_progress_indicator.dart';
 import 'package:anytime/ui/widgets/podcast_html.dart';
 import 'package:anytime/ui/widgets/podcast_image.dart';
-import 'package:anytime/ui/widgets/sync_spinner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dialogs/flutter_dialogs.dart';
@@ -295,40 +288,6 @@ class _PodcastDetailsState extends State<PodcastDetails> {
                           ),
                         );
                       }),
-                  StreamBuilder<BlocState<Podcast>>(
-                      initialData: BlocEmptyState<Podcast>(),
-                      stream: podcastBloc.details,
-                      builder: (context1, snapshot1) {
-                        final state = snapshot1.data;
-
-                        if (state is BlocPopulatedState<Podcast>) {
-                          return StreamBuilder<List<Episode?>?>(
-                              stream: podcastBloc.episodes,
-                              builder: (context, snapshot) {
-                                if (snapshot.hasData) {
-                                  return snapshot.data!.isNotEmpty
-                                      ? PodcastEpisodeList(
-                                          episodes: snapshot.data!,
-                                          play: true,
-                                          download: true,
-                                        )
-                                      : const SliverToBoxAdapter(child: NoEpisodesFound());
-                                } else {
-                                  return const SliverToBoxAdapter(
-                                      child: SizedBox(
-                                    height: 200,
-                                    width: 200,
-                                  ));
-                                }
-                              });
-                        } else {
-                          return const SliverToBoxAdapter(
-                              child: SizedBox(
-                            height: 200,
-                            width: 200,
-                          ));
-                        }
-                      }),
                 ],
               ),
             ),
@@ -443,128 +402,10 @@ class _PodcastTitleState extends State<PodcastTitle> with SingleTickerProviderSt
                   ),
                 ),
               ),
-              StreamBuilder<bool>(
-                  stream: isDescriptionExpandedStream.stream,
-                  initialData: false,
-                  builder: (context, snapshot) {
-                    final expanded = snapshot.data!;
-                    return Visibility(
-                      visible: showOverflow,
-                      child: SizedBox(
-                        height: 48.0,
-                        width: 48.0,
-                        child: expanded
-                            ? TextButton(
-                                style: const ButtonStyle(
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                                child: Icon(
-                                  Icons.expand_less,
-                                  semanticLabel: L.of(context)!.semantics_collapse_podcast_description,
-                                ),
-                                onPressed: () {
-                                  isDescriptionExpandedStream.add(false);
-                                },
-                              )
-                            : TextButton(
-                                style: const ButtonStyle(visualDensity: VisualDensity.compact),
-                                child: Icon(
-                                  Icons.expand_more,
-                                  semanticLabel: L.of(context)!.semantics_expand_podcast_description,
-                                ),
-                                onPressed: () {
-                                  isDescriptionExpandedStream.add(true);
-                                },
-                              ),
-                      ),
-                    );
-                  })
+              FollowButton(widget.podcast),
             ],
           ),
-          PodcastDescription(
-            key: descriptionKey,
-            content: description,
-            isDescriptionExpandedStream: isDescriptionExpandedStream,
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 8.0, right: 8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                FollowButton(widget.podcast),
-                PodcastContextMenu(widget.podcast),
-                IconButton(
-                  onPressed: () {
-                    setState(() {
-                      if (showEpisodeSearch) {
-                        _controller.reverse();
-                      } else {
-                        _controller.forward();
-                        _searchFocus.requestFocus();
-                      }
-                      showEpisodeSearch = !showEpisodeSearch;
-                    });
-                  },
-                  icon: Icon(
-                    Icons.search,
-                    semanticLabel: L.of(context)!.search_episodes_label,
-                  ),
-                  visualDensity: VisualDensity.compact,
-                ),
-                SortButton(widget.podcast),
-                FilterButton(widget.podcast),
-                settings.showFunding
-                    ? FundingMenu(widget.podcast.funding)
-                    : const SizedBox(
-                        width: 0.0,
-                        height: 0.0,
-                      ),
-                const Expanded(
-                    child: Align(
-                  alignment: Alignment.centerRight,
-                  child: SyncSpinner(),
-                )),
-              ],
-            ),
-          ),
-          SizeTransition(
-            sizeFactor: _animation,
-            child: Padding(
-                padding: const EdgeInsets.all(7.0),
-                child: TextField(
-                    focusNode: _searchFocus,
-                    controller: _episodeSearchController,
-                    decoration: InputDecoration(
-                      contentPadding: const EdgeInsets.all(0.0),
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          Icons.close,
-                          semanticLabel: L.of(context)!.clear_search_button_label,
-                        ),
-                        onPressed: () {
-                          _episodeSearchController.clear();
-                          podcastBloc.podcastSearchEvent('');
-                        },
-                      ),
-                      isDense: true,
-                      filled: true,
-                      border: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(8.0)),
-                        borderSide: BorderSide.none,
-                        gapPadding: 0.0,
-                      ),
-                      hintText: L.of(context)!.search_episodes_label,
-                    ),
-                    onChanged: ((search) {
-                      podcastBloc.podcastSearchEvent(search);
-                    }),
-                    onSubmitted: ((search) {
-                      podcastBloc.podcastSearchEvent(search);
-                    }),
-                    onTapOutside: (event) => _searchFocus.unfocus())),
-          ),
+          Container(child: description),
         ],
       ),
     );
@@ -593,89 +434,6 @@ class _PodcastTitleState extends State<PodcastTitle> with SingleTickerProviderSt
     _episodeSearchController.dispose();
     _searchFocus.dispose();
     super.dispose();
-  }
-}
-
-/// This class wraps the description in an expandable box.
-///
-/// This handles the common case whereby the description is very long and, without
-/// this constraint, would require the use to always scroll before reaching the
-/// podcast episodes.
-///
-/// TODO: Animate between the two states.
-class PodcastDescription extends StatelessWidget {
-  final PodcastHtml? content;
-  final StreamController<bool>? isDescriptionExpandedStream;
-  static const maxHeight = 100.0;
-  static const padding = 4.0;
-
-  const PodcastDescription({
-    super.key,
-    this.content,
-    this.isDescriptionExpandedStream,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: PodcastDescription.padding),
-      child: StreamBuilder<bool>(
-          stream: isDescriptionExpandedStream!.stream,
-          initialData: false,
-          builder: (context, snapshot) {
-            final expanded = snapshot.data!;
-            return AnimatedSize(
-              duration: const Duration(milliseconds: 150),
-              curve: Curves.fastOutSlowIn,
-              alignment: Alignment.topCenter,
-              child: Container(
-                constraints: expanded
-                    ? const BoxConstraints()
-                    : BoxConstraints.loose(const Size(double.infinity, maxHeight - padding)),
-                child: expanded
-                    ? content
-                    : ShaderMask(
-                        shaderCallback: LinearGradient(
-                          colors: [Colors.white, Colors.white.withAlpha(0)],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          stops: const [0.9, 1],
-                        ).createShader,
-                        child: content),
-              ),
-            );
-          }),
-    );
-  }
-}
-
-class NoEpisodesFound extends StatelessWidget {
-  const NoEpisodesFound({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            L.of(context)!.episode_filter_no_episodes_title_label,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(64.0, 24.0, 64.0, 64.0),
-            child: Text(
-              L.of(context)!.episode_filter_no_episodes_title_description,
-              style: Theme.of(context).textTheme.titleSmall,
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -767,64 +525,6 @@ class FollowButton extends StatelessWidget {
                           }
                         : null,
                   ),
-          );
-        });
-  }
-}
-
-class FilterButton extends StatelessWidget {
-  final Podcast podcast;
-
-  const FilterButton(this.podcast, {super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final bloc = Provider.of<PodcastBloc>(context);
-
-    return StreamBuilder<BlocState<Podcast>>(
-        stream: bloc.details,
-        builder: (context, snapshot) {
-          Podcast? podcast;
-
-          if (snapshot.hasData) {
-            final state = snapshot.data;
-
-            if (state is BlocPopulatedState<Podcast>) {
-              podcast = state.results!;
-            }
-          }
-
-          return EpisodeFilterSelectorWidget(
-            podcast: podcast,
-          );
-        });
-  }
-}
-
-class SortButton extends StatelessWidget {
-  final Podcast podcast;
-
-  const SortButton(this.podcast, {super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final bloc = Provider.of<PodcastBloc>(context);
-
-    return StreamBuilder<BlocState<Podcast>>(
-        stream: bloc.details,
-        builder: (context, snapshot) {
-          Podcast? podcast;
-
-          if (snapshot.hasData) {
-            final state = snapshot.data;
-
-            if (state is BlocPopulatedState<Podcast>) {
-              podcast = state.results!;
-            }
-          }
-
-          return EpisodeSortSelectorWidget(
-            podcast: podcast,
           );
         });
   }
