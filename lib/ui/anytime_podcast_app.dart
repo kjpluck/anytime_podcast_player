@@ -524,12 +524,6 @@ class _AnytimeHomePageState extends State<AnytimeHomePage>
                         : const Icon(Icons.explore_outlined),
                     label: L.of(context)!.discover,
                   ),
-                  BottomNavigationBarItem(
-                    icon: index == 3
-                        ? const Icon(Icons.download)
-                        : const Icon(Icons.download_outlined),
-                    label: L.of(context)!.downloads,
-                  ),
                 ],
               );
             }),
@@ -542,13 +536,11 @@ class _AnytimeHomePageState extends State<AnytimeHomePage>
       return const Library();
     } else if (index == 1) {
       return const Episodes();
-    } else if (index == 2) {
+    } else {
       return const Discovery(
         categories: true,
       );
-    } else {
-      return const Downloads();
-    }
+    } 
   }
 
   void _menuSelect(String choice) async {

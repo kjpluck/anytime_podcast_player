@@ -10,7 +10,6 @@ import 'package:anytime/entities/downloadable.dart';
 import 'package:anytime/entities/episode.dart';
 import 'package:anytime/l10n/L.dart';
 import 'package:anytime/services/audio/audio_player_service.dart';
-import 'package:anytime/state/queue_event_state.dart';
 import 'package:anytime/ui/podcast/episode_details.dart';
 import 'package:anytime/ui/podcast/transport_controls.dart';
 import 'package:anytime/ui/widgets/action_text.dart';
@@ -18,7 +17,6 @@ import 'package:anytime/ui/widgets/tile_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dialogs/flutter_dialogs.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:provider/provider.dart';
 import 'package:rxdart/rxdart.dart';
@@ -48,18 +46,14 @@ class EpisodeTile extends StatelessWidget {
       if (defaultTargetPlatform == TargetPlatform.iOS) {
         return _CupertinoAccessibleEpisodeTile(
           episode: episode,
-          download: download,
           play: play,
           playing: playing,
-          queued: queued,
         );
       } else {
         return _AccessibleEpisodeTile(
           episode: episode,
-          download: download,
           play: play,
           playing: playing,
-          queued: queued,
         );
       }
     } else {
@@ -108,19 +102,29 @@ class _ExpandableEpisodeTileState extends State<ExpandableEpisodeTile> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = Theme.of(context).textTheme;
-    final episodeBloc = Provider.of<EpisodeBloc>(context);
-    final queueBloc = Provider.of<QueueBloc>(context);
 
-    return ExpansionTile(
-      tilePadding: const EdgeInsets.fromLTRB(16.0, 0.0, 8.0, 0.0),
+    return ListTile(
       key: Key('PT${widget.episode.guid}'),
-      onExpansionChanged: (isExpanded) {
-        setState(() {
-          expanded = isExpanded;
-        });
+      onTap: () {
+        showModalBottomSheet<void>(
+            barrierLabel: L.of(context)!.scrim_episode_details_selector,
+            context: context,
+            backgroundColor: theme.bottomAppBarTheme.color,
+            isScrollControlled: true,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(10.0),
+                topRight: Radius.circular(10.0),
+              ),
+            ),
+            builder: (context) {
+              return EpisodeDetails(
+                episode: widget.episode,
+              );
+            });
       },
       trailing: Opacity(
-        opacity: widget.episode.played ? 0.5 : 1.0,
+        opacity: widget.episode.queued ? 1.0 : 0.5,
         child: EpisodeTransportControls(
           episode: widget.episode,
           download: widget.download,
@@ -133,7 +137,7 @@ class _ExpandableEpisodeTileState extends State<ExpandableEpisodeTile> {
           fit: StackFit.passthrough,
           children: <Widget>[
             Opacity(
-              opacity: widget.episode.played ? 0.5 : 1.0,
+              opacity: widget.episode.queued ? 1.0 : 0.5,
               child: TileImage(
                 url: widget.episode.thumbImageUrl ?? widget.episode.imageUrl!,
                 size: 56.0,
@@ -151,11 +155,11 @@ class _ExpandableEpisodeTileState extends State<ExpandableEpisodeTile> {
         ),
       ),
       subtitle: Opacity(
-        opacity: widget.episode.played ? 0.5 : 1.0,
+        opacity: widget.episode.queued ? 1.0 : 0.5,
         child: EpisodeSubtitle(widget.episode),
       ),
       title: Opacity(
-        opacity: widget.episode.played ? 0.5 : 1.0,
+        opacity: widget.episode.queued ? 1.0 : 0.5,
         child: Text(
           widget.episode.title!,
           overflow: TextOverflow.ellipsis,
@@ -164,217 +168,7 @@ class _ExpandableEpisodeTileState extends State<ExpandableEpisodeTile> {
           style: textTheme.bodyMedium,
         ),
       ),
-      children: <Widget>[
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 4.0,
-            ),
-            child: Text(
-              widget.episode.descriptionText!,
-              overflow: TextOverflow.ellipsis,
-              softWrap: false,
-              maxLines: 5,
-              style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                    fontSize: 14,
-                    fontWeight: FontWeight.normal,
-                  ),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(0.0, 4.0, 0.0, 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Expanded(
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4.0)),
-                  ),
-                  onPressed: widget.episode.downloaded
-                      ? () {
-                          showPlatformDialog<void>(
-                            context: context,
-                            useRootNavigator: false,
-                            builder: (_) => BasicDialogAlert(
-                              title: Text(
-                                L.of(context)!.delete_episode_title,
-                              ),
-                              content: Text(L.of(context)!.delete_episode_confirmation),
-                              actions: <Widget>[
-                                BasicDialogAction(
-                                  title: ActionText(
-                                    L.of(context)!.cancel_button_label,
-                                  ),
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                  },
-                                ),
-                                BasicDialogAction(
-                                  title: ActionText(
-                                    L.of(context)!.delete_button_label,
-                                  ),
-                                  iosIsDefaultAction: true,
-                                  iosIsDestructiveAction: true,
-                                  onPressed: () {
-                                    episodeBloc.deleteDownload(widget.episode);
-                                    Navigator.pop(context);
-                                  },
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-                      : null,
-                  child: Column(
-                    children: <Widget>[
-                      Icon(
-                        Icons.delete_outline,
-                        semanticLabel: L.of(context)!.delete_episode_button_label,
-                        size: 22,
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 2.0),
-                      ),
-                      ExcludeSemantics(
-                        child: Text(
-                          L.of(context)!.delete_label,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.normal,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Expanded(
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0.0)),
-                  ),
-                  onPressed: widget.playing
-                      ? null
-                      : () {
-                          if (widget.queued) {
-                            queueBloc.queueEvent(QueueRemoveEvent(episode: widget.episode));
-                          } else {
-                            queueBloc.queueEvent(QueueAddEvent(episode: widget.episode));
-                          }
-                        },
-                  child: Column(
-                    children: <Widget>[
-                      Icon(
-                        widget.queued ? Icons.playlist_add_check_outlined : Icons.playlist_add_outlined,
-                        semanticLabel: widget.queued
-                            ? L.of(context)!.semantics_remove_from_queue
-                            : L.of(context)!.semantics_add_to_queue,
-                        size: 22,
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 2.0),
-                      ),
-                      ExcludeSemantics(
-                        child: Text(
-                          widget.queued ? 'Remove' : 'Add',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.normal,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Expanded(
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0.0)),
-                  ),
-                  onPressed: () {
-                    episodeBloc.togglePlayed(widget.episode);
-                  },
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: <Widget>[
-                      Icon(
-                        widget.episode.played ? Icons.unpublished_outlined : Icons.check_circle_outline,
-                        size: 22,
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 2.0),
-                      ),
-                      Text(
-                        widget.episode.played ? L.of(context)!.mark_unplayed_label : L.of(context)!.mark_played_label,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.normal,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Expanded(
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0.0)),
-                  ),
-                  onPressed: () {
-                    showModalBottomSheet<void>(
-                        barrierLabel: L.of(context)!.scrim_episode_details_selector,
-                        context: context,
-                        backgroundColor: theme.bottomAppBarTheme.color,
-                        isScrollControlled: true,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(10.0),
-                            topRight: Radius.circular(10.0),
-                          ),
-                        ),
-                        builder: (context) {
-                          return EpisodeDetails(
-                            episode: widget.episode,
-                          );
-                        });
-                  },
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: <Widget>[
-                      const Icon(
-                        Icons.unfold_more_outlined,
-                        size: 22,
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 2.0),
-                      ),
-                      Text(
-                        L.of(context)!.more_label,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.normal,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+      
     );
   }
 }
@@ -383,17 +177,13 @@ class _ExpandableEpisodeTileState extends State<ExpandableEpisodeTile> {
 /// When the tile is tapped, an iOS menu will appear with the relevant options.
 class _CupertinoAccessibleEpisodeTile extends StatefulWidget {
   final Episode episode;
-  final bool download;
   final bool play;
   final bool playing;
-  final bool queued;
 
   const _CupertinoAccessibleEpisodeTile({
     required this.episode,
-    required this.download,
     required this.play,
     this.playing = false,
-    this.queued = false,
   });
 
   @override
@@ -527,24 +317,6 @@ class _CupertinoAccessibleEpisodeTileState extends State<_CupertinoAccessibleEpi
                                 ? Text(L.of(context)!.delete_episode_button_label)
                                 : Text(L.of(context)!.download_episode_button_label),
                           ),
-                        if (!currentlyPlaying && !widget.queued)
-                          CupertinoActionSheetAction(
-                            isDefaultAction: false,
-                            onPressed: () {
-                              queueBloc.queueEvent(QueueAddEvent(episode: widget.episode));
-                              Navigator.pop(context, 'Cancel');
-                            },
-                            child: Text(L.of(context)!.semantics_add_to_queue),
-                          ),
-                        if (!currentlyPlaying && widget.queued)
-                          CupertinoActionSheetAction(
-                            isDefaultAction: false,
-                            onPressed: () {
-                              queueBloc.queueEvent(QueueRemoveEvent(episode: widget.episode));
-                              Navigator.pop(context, 'Cancel');
-                            },
-                            child: Text(L.of(context)!.semantics_remove_from_queue),
-                          ),
                         if (widget.episode.played)
                           CupertinoActionSheetAction(
                             isDefaultAction: false,
@@ -609,17 +381,13 @@ class _CupertinoAccessibleEpisodeTileState extends State<_CupertinoAccessibleEpi
 /// options.
 class _AccessibleEpisodeTile extends StatefulWidget {
   final Episode episode;
-  final bool download;
   final bool play;
   final bool playing;
-  final bool queued;
 
   const _AccessibleEpisodeTile({
     required this.episode,
-    required this.download,
     required this.play,
     this.playing = false,
-    this.queued = false,
   });
 
   @override
@@ -636,7 +404,6 @@ class _AccessibleEpisodeTileState extends State<_AccessibleEpisodeTile> {
     final audioBloc = Provider.of<AudioBloc>(context, listen: false);
     final episodeBloc = Provider.of<EpisodeBloc>(context);
     final podcastBloc = Provider.of<PodcastBloc>(context);
-    final queueBloc = Provider.of<QueueBloc>(context);
 
     return StreamBuilder<_PlayerControlState>(
         stream: Rx.combineLatest2(audioBloc.playingState!, audioBloc.nowPlaying!,
@@ -727,24 +494,6 @@ class _AccessibleEpisodeTileState extends State<_AccessibleEpisodeTile> {
                             padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 24.0),
                             child: Text(L.of(context)!.download_episode_button_label),
                           ),
-                        if (!currentlyPlaying && !widget.queued)
-                          SimpleDialogOption(
-                            onPressed: () {
-                              queueBloc.queueEvent(QueueAddEvent(episode: widget.episode));
-                              Navigator.pop(context, '');
-                            },
-                            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 24.0),
-                            child: Text(L.of(context)!.semantics_add_to_queue),
-                          ),
-                        if (!currentlyPlaying && widget.queued)
-                          SimpleDialogOption(
-                            onPressed: () {
-                              queueBloc.queueEvent(QueueRemoveEvent(episode: widget.episode));
-                              Navigator.pop(context, '');
-                            },
-                            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 24.0),
-                            child: Text(L.of(context)!.semantics_remove_from_queue),
-                          ),
                         if (widget.episode.played)
                           SimpleDialogOption(
                             onPressed: () {
@@ -811,7 +560,7 @@ class _AccessibleEpisodeTileState extends State<_AccessibleEpisodeTile> {
                 fit: StackFit.passthrough,
                 children: <Widget>[
                   Opacity(
-                    opacity: widget.episode.played ? 0.5 : 1.0,
+                    opacity: widget.episode.queued ? 1.0 : 0.5,
                     child: TileImage(
                       url: widget.episode.thumbImageUrl ?? widget.episode.imageUrl!,
                       size: 56.0,
@@ -829,13 +578,13 @@ class _AccessibleEpisodeTileState extends State<_AccessibleEpisodeTile> {
               ),
             ),
             subtitle: Opacity(
-              opacity: widget.episode.played ? 0.5 : 1.0,
+              opacity: widget.episode.queued ? 1.0 : 0.5,
               child: EpisodeSubtitle(widget.episode),
             ),
             title: Opacity(
-              opacity: widget.episode.played ? 0.5 : 1.0,
+              opacity: widget.episode.queued ? 1.0 : 0.5,
               child: Text(
-                widget.episode.title!,
+                '${widget.episode.title!} ${widget.episode.queued}',
                 overflow: TextOverflow.ellipsis,
                 maxLines: 2,
                 softWrap: false,
@@ -862,15 +611,6 @@ class EpisodeTransportControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final buttons = <Widget>[];
-
-    if (download) {
-      buttons.add(Semantics(
-        container: true,
-        child: DownloadControl(
-          episode: episode,
-        ),
-      ));
-    }
 
     if (play) {
       buttons.add(Semantics(
