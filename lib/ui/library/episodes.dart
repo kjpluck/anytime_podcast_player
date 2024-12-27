@@ -27,7 +27,6 @@ class Episodes extends StatefulWidget {
   State<Episodes> createState() => _EpisodesState();
 }
 
-/// Displays a list of podcast episodes that the user has downloaded.
 class _EpisodesState extends State<Episodes> {
   @override
   void initState() {

@@ -34,8 +34,8 @@ import 'package:anytime/services/podcast/podcast_service.dart';
 import 'package:anytime/services/settings/mobile_settings_service.dart';
 import 'package:anytime/ui/library/discovery.dart';
 import 'package:anytime/ui/library/downloads.dart';
+import 'package:anytime/ui/library/episodes.dart';
 import 'package:anytime/ui/library/library.dart';
-import 'package:anytime/ui/library/queue.dart';
 import 'package:anytime/ui/podcast/mini_player.dart';
 import 'package:anytime/ui/podcast/podcast_details.dart';
 import 'package:anytime/ui/search/search.dart';
@@ -511,17 +511,13 @@ class _AnytimeHomePageState extends State<AnytimeHomePage>
                         : const Icon(Icons.library_music_outlined),
                     label: L.of(context)!.library,
                   ),
+                  // To be fleshed out later.
                   BottomNavigationBarItem(
                     icon: index == 1
-                        ? const Icon(Icons.library_books)
-                        : const Icon(Icons.library_books_outlined),
-                    label: L.of(context)!.up_next_queue_label,
+                        ? Icon(Icons.article_rounded)
+                        : Icon(Icons.article_outlined),
+                    label: 'Episodes',
                   ),
-                  // To be fleshed out later.
-                  // BottomNavigationBarItem(
-                  //   icon: index == 0 ? Icon(Icons.article_rounded) : Icon(Icons.article_outlined),
-                  //   label: 'Episodes',
-                  // ),
                   BottomNavigationBarItem(
                     icon: index == 2
                         ? const Icon(Icons.explore)
@@ -545,7 +541,7 @@ class _AnytimeHomePageState extends State<AnytimeHomePage>
     if (index == 0) {
       return const Library();
     } else if (index == 1) {
-      return const TheQueue();
+      return const Episodes();
     } else if (index == 2) {
       return const Discovery(
         categories: true,
