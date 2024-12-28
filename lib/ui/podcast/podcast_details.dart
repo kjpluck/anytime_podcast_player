@@ -5,7 +5,6 @@
 import 'dart:async';
 
 import 'package:anytime/bloc/podcast/podcast_bloc.dart';
-import 'package:anytime/bloc/settings/settings_bloc.dart';
 import 'package:anytime/entities/feed.dart';
 import 'package:anytime/entities/podcast.dart';
 import 'package:anytime/l10n/L.dart';
@@ -114,7 +113,10 @@ class _PodcastDetailsState extends State<PodcastDetails> {
   void didChangeDependencies() {
     _systemOverlayStyle = SystemUiOverlayStyle(
       statusBarIconBrightness: Theme.of(context).brightness == Brightness.light ? Brightness.dark : Brightness.light,
-      statusBarColor: Theme.of(context).appBarTheme.backgroundColor!.withOpacity(toolbarCollapsed ? 1.0 : 0.5),
+      statusBarColor: Theme.of(context)
+          .appBarTheme
+          .backgroundColor!
+          .withValues(alpha: toolbarCollapsed ? 1.0 : 0.5),
     );
     super.didChangeDependencies();
   }
@@ -146,7 +148,10 @@ class _PodcastDetailsState extends State<PodcastDetails> {
     setState(() {
       _systemOverlayStyle = SystemUiOverlayStyle(
         statusBarIconBrightness: Theme.of(context).brightness == Brightness.light ? Brightness.dark : Brightness.light,
-        statusBarColor: Theme.of(context).appBarTheme.backgroundColor!.withOpacity(toolbarCollapsed ? 1.0 : 0.5),
+        statusBarColor: Theme.of(context)
+            .appBarTheme
+            .backgroundColor!
+            .withValues(alpha: toolbarCollapsed ? 1.0 : 0.5),
       );
     });
   }
@@ -359,20 +364,9 @@ class _PodcastTitleState extends State<PodcastTitle> with SingleTickerProviderSt
   final _episodeSearchController = TextEditingController();
   final _searchFocus = FocusNode();
 
-  late final AnimationController _controller = AnimationController(
-    duration: const Duration(milliseconds: 200),
-    vsync: this,
-  );
-  late final Animation<double> _animation = CurvedAnimation(
-    parent: _controller,
-    curve: Curves.fastOutSlowIn,
-  );
-
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final settings = Provider.of<SettingsBloc>(context).currentSettings;
-    final podcastBloc = Provider.of<PodcastBloc>(context, listen: false);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 0.0),

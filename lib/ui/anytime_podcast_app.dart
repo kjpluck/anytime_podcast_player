@@ -513,8 +513,8 @@ class _AnytimeHomePageState extends State<AnytimeHomePage>
                   // To be fleshed out later.
                   BottomNavigationBarItem(
                     icon: index == 1
-                        ? Icon(Icons.article_rounded)
-                        : Icon(Icons.article_outlined),
+                        ? const Icon(Icons.article_rounded)
+                        : const Icon(Icons.article_outlined),
                     label: 'Episodes',
                   ),
                   BottomNavigationBarItem(
