@@ -144,6 +144,8 @@ class DefaultAudioPlayerService extends AudioPlayerService {
       log.info('Playing episode ${episode.id} - ${episode.title} from position ${episode.position}');
       log.fine(' - $uri');
 
+      await _makeQueue(episode);
+
       _playingState.add(AudioState.buffering);
       _playbackSpeed = settingsService.playbackSpeed;
       _trimSilence = settingsService.trimSilence;
@@ -516,8 +518,29 @@ class DefaultAudioPlayerService extends AudioPlayerService {
     });
   }
 
+  Future<void> _makeQueue(Episode? currentEpisode) async {
+    var episodes = await podcastService.loadEpisodes();
+    episodes.sort((a, b) =>
+        a.publicationDate!.millisecondsSinceEpoch -
+        b.publicationDate!.millisecondsSinceEpoch);
+
+    _queue = [];
+
+    var currentEpisodePublished = currentEpisode!.publicationDate == null
+        ? 0
+        : currentEpisode.publicationDate!.millisecondsSinceEpoch;
+    for (var episode in episodes) {
+      if (episode.publicationDate!.millisecondsSinceEpoch >
+          currentEpisodePublished) {
+        _queue.add(episode);
+      }
+    }
+
+    _updateQueueState();
+  }
+
   Future<void> _loadQueue() async {
-    _queue = await podcastService.loadQueue();
+    _makeQueue(_currentEpisode);
   }
 
   Future<void> _completed() async {
@@ -1082,8 +1105,10 @@ class _DefaultAudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     if (_currentItem != null) {
       // The episode may have been updated elsewhere - re-fetch it.
       var currentPosition = playbackState.value.position.inMilliseconds;
-      var storedEpisode = (await repository.findEpisodeByGuid(_currentItem!.extras!['eid'] as String))!;
-
+      var storedEpisode = (await repository
+          .findEpisodeByGuid(_currentItem!.extras!['eid'] as String));
+      if (storedEpisode == null) return;
+      
       log.fine(
           '_savePosition(): Current position is $currentPosition - stored position is ${storedEpisode.position} on episode ${storedEpisode.title}');
 

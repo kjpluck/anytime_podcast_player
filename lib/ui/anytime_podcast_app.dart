@@ -33,7 +33,6 @@ import 'package:anytime/services/podcast/opml_service.dart';
 import 'package:anytime/services/podcast/podcast_service.dart';
 import 'package:anytime/services/settings/mobile_settings_service.dart';
 import 'package:anytime/ui/library/discovery.dart';
-import 'package:anytime/ui/library/downloads.dart';
 import 'package:anytime/ui/library/episodes.dart';
 import 'package:anytime/ui/library/library.dart';
 import 'package:anytime/ui/podcast/mini_player.dart';

@@ -305,7 +305,8 @@ class PodcastBloc extends Bloc {
       switch (event) {
         case PodcastEvent.subscribe:
           if (_podcast != null) {
-            _podcast = await podcastService.subscribe(_podcast!);
+            _podcast = await podcastService.subscribe(
+                _podcast!, audioPlayerService.nowPlaying);
             _podcastStream.add(BlocPopulatedState<Podcast>(results: _podcast));
             _loadSubscriptions();
             _episodesStream.add(_podcast?.episodes);

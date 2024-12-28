@@ -49,6 +49,11 @@ class PodcastEpisodeList extends StatelessWidget {
 
                   playing = playingGuid == episode.guid;
                 }
+                else {
+                  // As no episode is playing highlight all episodes
+                  // by making them all queued
+                  queued = true;
+                }
 
                 return EpisodeTile(
                   episode: episode,

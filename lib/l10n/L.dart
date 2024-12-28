@@ -247,6 +247,18 @@ class L {
         );
   }
 
+
+  String get no_episodes_message {
+    return message('no_episodes_message') ??
+        Intl.message(
+          'You do not have any episodes to play',
+          name: 'no_episodes_message',
+          desc:
+              'Displayed on the library tab when the user has no subscriptions',
+          locale: localeName,
+        );
+  }
+
   String get no_search_results_message {
     return message('no_search_results_message') ??
         Intl.message(

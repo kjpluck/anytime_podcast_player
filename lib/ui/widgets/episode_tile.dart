@@ -123,7 +123,7 @@ class _ExpandableEpisodeTileState extends State<ExpandableEpisodeTile> {
             });
       },
       trailing: Opacity(
-        opacity: widget.episode.queued ? 1.0 : 0.5,
+        opacity: widget.queued || widget.playing ? 1.0 : 0.5,
         child: EpisodeTransportControls(
           episode: widget.episode,
           download: widget.download,
@@ -136,7 +136,7 @@ class _ExpandableEpisodeTileState extends State<ExpandableEpisodeTile> {
           fit: StackFit.passthrough,
           children: <Widget>[
             Opacity(
-              opacity: widget.episode.queued ? 1.0 : 0.5,
+              opacity: widget.queued || widget.playing ? 1.0 : 0.5,
               child: TileImage(
                 url: widget.episode.thumbImageUrl ?? widget.episode.imageUrl!,
                 size: 56.0,
@@ -154,11 +154,11 @@ class _ExpandableEpisodeTileState extends State<ExpandableEpisodeTile> {
         ),
       ),
       subtitle: Opacity(
-        opacity: widget.episode.queued ? 1.0 : 0.5,
+        opacity: widget.queued || widget.playing ? 1.0 : 0.5,
         child: EpisodeSubtitle(widget.episode),
       ),
       title: Opacity(
-        opacity: widget.episode.queued ? 1.0 : 0.5,
+        opacity: widget.queued || widget.playing ? 1.0 : 0.5,
         child: Text(
           widget.episode.title!,
           overflow: TextOverflow.ellipsis,

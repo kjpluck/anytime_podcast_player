@@ -17,6 +17,7 @@ import 'package:anytime/entities/transcript.dart';
 import 'package:anytime/l10n/messages_all.dart';
 import 'package:anytime/services/podcast/podcast_service.dart';
 import 'package:anytime/state/episode_state.dart';
+import 'package:anytime/state/queue_event_state.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -25,12 +26,15 @@ import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:path/path.dart';
 import 'package:podcast_search/podcast_search.dart' as podcast_search;
+import 'package:rxdart/rxdart.dart';
 
 class MobilePodcastService extends PodcastService {
   final descriptionRegExp1 = RegExp(r'(</p><br>|</p></br>|<p><br></p>|<p></br></p>)');
   final descriptionRegExp2 = RegExp(r'(<p><br></p>|<p></br></p>)');
   final log = Logger('MobilePodcastService');
   final _cache = _PodcastCache(maxItems: 10, expiration: const Duration(minutes: 30));
+  final _queueState = BehaviorSubject<QueueListState>();
+  
   var _categories = <String>[];
   var _intlCategories = <String?>[];
   var _intlCategoriesSorted = <String>[];
@@ -571,7 +575,8 @@ class MobilePodcastService extends PodcastService {
   }
 
   @override
-  Future<Podcast?> subscribe(Podcast? podcast) async {
+  Future<Podcast?> subscribe(
+      Podcast? podcast, Episode? currentlyPlaying) async {
     // We may already have episodes download for this podcast before the user
     // hit subscribe.
     if (podcast != null && podcast.guid != null) {
@@ -586,6 +591,24 @@ class MobilePodcastService extends PodcastService {
           }
         }
       }
+
+      // Update queue
+      final episodes = await loadEpisodes();
+      episodes.sort((a, b) =>
+          a.publicationDate!.millisecondsSinceEpoch -
+          b.publicationDate!.millisecondsSinceEpoch);
+
+      final List<Episode> queue = [];
+      final currentEpisodePublished = currentlyPlaying == null
+          ? 0
+          : currentlyPlaying.publicationDate!.microsecondsSinceEpoch;
+      for (final episode in episodes) {
+        if (episode.publicationDate!.millisecondsSinceEpoch >
+            currentEpisodePublished) {
+          queue.add(episode);
+        }
+      }
+      _queueState.add(QueueListState(playing: currentlyPlaying, queue: queue));
 
       return repository.savePodcast(podcast);
     }
