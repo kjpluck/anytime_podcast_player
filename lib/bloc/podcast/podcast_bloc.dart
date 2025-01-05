@@ -23,7 +23,6 @@ enum PodcastEvent {
   markAllPlayed,
   clearAllPlayed,
   reloadSubscriptions,
-  refresh,
   // Filter
   episodeFilterNone,
   episodeFilterStarted,
@@ -59,9 +58,6 @@ class PodcastBloc extends Bloc {
   /// Stream containing details of the current podcast.
   final BehaviorSubject<BlocState<Podcast>> _podcastStream = BehaviorSubject<BlocState<Podcast>>(sync: true);
 
-  /// A separate stream that allows us to listen to changes in the podcast's episodes.
-  final BehaviorSubject<List<Episode?>?> _episodesStream = BehaviorSubject<List<Episode?>?>();
-
   /// Receives subscription and mark/clear as played events.
   final PublishSubject<PodcastEvent> _podcastEvent = PublishSubject<PodcastEvent>();
 
@@ -71,7 +67,6 @@ class PodcastBloc extends Bloc {
 
   Podcast? _podcast;
   List<Episode> _episodes = <Episode>[];
-  String _searchTerm = '';
   late Feed lastFeed;
   bool first = true;
 
@@ -94,17 +89,11 @@ class PodcastBloc extends Bloc {
     /// Listen to an Episode download request
     _listenDownloadRequest();
 
-    /// Listen to active downloads
-    _listenDownloads();
-
     /// Listen to episode change events sent by the [Repository]
     _listenEpisodeRepositoryEvents();
 
     /// Listen to Podcast subscription, mark/cleared played events
     _listenPodcastStateEvents();
-
-    /// Listen for episode search requests
-    _listenPodcastSearchEvents();
   }
 
   void _loadSubscriptions() async {
@@ -121,7 +110,6 @@ class PodcastBloc extends Bloc {
       lastFeed = feed;
 
       _episodes = [];
-      _refresh();
 
       _podcastStream.sink.add(BlocLoadingState<Podcast>(feed.podcast));
 
@@ -184,15 +172,10 @@ class PodcastBloc extends Bloc {
     if (_podcast != null && _podcast?.url != null) {
       if (lastFeed.podcast.url == _podcast!.url) {
         _episodes = _podcast!.episodes;
-        _refresh();
 
         _podcastStream.sink.add(BlocPopulatedState<Podcast>(results: _podcast));
       }
     }
-  }
-
-  void _refresh() {
-    applySearchFilter();
   }
 
   Future<void> _loadNewEpisodes(Feed feed) async {
@@ -211,9 +194,6 @@ class PodcastBloc extends Bloc {
         log.fine('We have new episodes to display');
         _backgroundLoadStream.sink.add(BlocPopulatedState<void>());
         _podcastStream.sink.add(BlocPopulatedState<Podcast>(results: _podcast));
-      } else if (_podcast!.updatedEpisodes) {
-        log.fine('We have updated episodes to re-display');
-        _refresh();
       }
     }
 
@@ -231,7 +211,6 @@ class PodcastBloc extends Bloc {
 
       _episodes = _podcast!.episodes;
       _podcastStream.add(BlocPopulatedState<Podcast>(results: _podcast));
-      _refresh();
     }
   }
 
@@ -247,44 +226,18 @@ class PodcastBloc extends Bloc {
       if (episode != null) {
         episode.downloadState = e.downloadState = DownloadState.queued;
 
-        _refresh();
-
         var result = await downloadService.downloadEpisode(e);
 
         // If there was an error downloading the episode, push an error state
         // and then restore to none.
         if (!result) {
           episode.downloadState = e.downloadState = DownloadState.failed;
-          _refresh();
           episode.downloadState = e.downloadState = DownloadState.none;
-          _refresh();
         }
       }
     });
   }
 
-  /// Sets up a listener to listen for status updates from any currently downloading episode.
-  ///
-  /// If the ID of a current download matches that of an episode currently in
-  /// use, we update the status of the episode and push it back into the episode stream.
-  void _listenDownloads() {
-    // Listen to download progress
-    MobileDownloadService.downloadProgress.listen((downloadProgress) {
-      downloadService.findEpisodeByTaskId(downloadProgress.id).then((downloadable) {
-        if (downloadable != null) {
-          // If the download matches a current episode push the update back into the stream.
-          var episode = _episodes.firstWhereOrNull((e) => e.downloadTaskId == downloadProgress.id);
-
-          if (episode != null) {
-            // Update the stream.
-            _refresh();
-          }
-        } else {
-          log.severe('Downloadable not found with id ${downloadProgress.id}');
-        }
-      });
-    });
-  }
 
   /// Listen to episode change events sent by the [Repository]
   void _listenEpisodeRepositoryEvents() {
@@ -294,7 +247,6 @@ class PodcastBloc extends Bloc {
 
       if (eidx != -1) {
         _episodes[eidx] = state.episode;
-        _refresh();
       }
     });
   }
@@ -309,7 +261,6 @@ class PodcastBloc extends Bloc {
                 _podcast!, audioPlayerService.nowPlaying);
             _podcastStream.add(BlocPopulatedState<Podcast>(results: _podcast));
             _loadSubscriptions();
-            _episodesStream.add(_podcast?.episodes);
           }
           break;
         case PodcastEvent.unsubscribe:
@@ -318,7 +269,6 @@ class PodcastBloc extends Bloc {
             _podcast!.id = null;
             _podcastStream.add(BlocPopulatedState<Podcast>(results: _podcast));
             _loadSubscriptions();
-            _episodesStream.add(_podcast!.episodes);
           }
           break;
         case PodcastEvent.markAllPlayed:
@@ -335,7 +285,6 @@ class PodcastBloc extends Bloc {
             }
 
             await podcastService.saveEpisodes(changedEpisodes);
-            _episodesStream.add(_podcast!.episodes);
           }
           break;
         case PodcastEvent.clearAllPlayed:
@@ -352,14 +301,10 @@ class PodcastBloc extends Bloc {
             }
 
             await podcastService.saveEpisodes(changedEpisodes);
-            _episodesStream.add(_podcast!.episodes);
           }
           break;
         case PodcastEvent.reloadSubscriptions:
           _loadSubscriptions();
-          break;
-        case PodcastEvent.refresh:
-          _refresh();
           break;
         case PodcastEvent.episodeFilterNone:
           if (_podcast != null) {
@@ -412,23 +357,6 @@ class PodcastBloc extends Bloc {
     });
   }
 
-  void _listenPodcastSearchEvents() {
-    _podcastSearchEvent.debounceTime(const Duration(milliseconds: 200)).listen((search) {
-      _searchTerm = search;
-      applySearchFilter();
-    });
-  }
-
-  void applySearchFilter() {
-    if (_searchTerm.isEmpty) {
-      _episodesStream.add(_episodes);
-    } else {
-      var searchFilteredEpisodes =
-          _episodes.where((e) => e.title!.toLowerCase().contains(_searchTerm.trim().toLowerCase())).toList();
-      _episodesStream.add(searchFilteredEpisodes);
-    }
-  }
-
   @override
   void detach() {
     downloadService.dispose();
@@ -440,7 +368,6 @@ class PodcastBloc extends Bloc {
     _downloadEpisode.close();
     _subscriptions.close();
     _podcastStream.close();
-    _episodesStream.close();
     _podcastEvent.close();
     MobileDownloadService.downloadProgress.close();
     downloadService.dispose();
@@ -462,8 +389,6 @@ class PodcastBloc extends Bloc {
 
   Stream<BlocState<void>> get backgroundLoading => _backgroundLoadStream.stream;
 
-  /// Stream containing the current list of Podcast episodes.
-  Stream<List<Episode?>?> get episodes => _episodesStream;
 
   /// Obtain a list of podcast currently subscribed to.
   Stream<List<Podcast>> get subscriptions => _subscriptions.stream;
