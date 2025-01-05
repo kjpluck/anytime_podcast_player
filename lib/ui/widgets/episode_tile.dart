@@ -123,7 +123,7 @@ class _ExpandableEpisodeTileState extends State<ExpandableEpisodeTile> {
             });
       },
       trailing: Opacity(
-        opacity: widget.queued || widget.playing ? 1.0 : 0.5,
+        opacity: 1.0, // widget.queued || widget.playing ? 1.0 : 0.5,
         child: EpisodeTransportControls(
           episode: widget.episode,
           download: widget.download,
