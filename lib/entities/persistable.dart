@@ -46,7 +46,8 @@ class Persistable {
       'episodeId': episodeId,
       'position': position,
       'state': state.toString(),
-      'lastUpdated': lastUpdated == null ? DateTime.now().millisecondsSinceEpoch : lastUpdated!.millisecondsSinceEpoch,
+      'lastUpdated': lastUpdated?.microsecondsSinceEpoch ??
+          DateTime.now().millisecondsSinceEpoch,
     };
   }
 

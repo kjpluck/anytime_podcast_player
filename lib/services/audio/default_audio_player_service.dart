@@ -164,15 +164,6 @@ class DefaultAudioPlayerService extends AudioPlayerService {
         _audioHandler.stop();
       }
 
-      // If we have a queue, we are currently playing and the user has elected to play something new,
-      // place the current episode at the top of the queue before moving on.
-      if (_currentEpisode != null && _currentEpisode!.guid != episode.guid && _queue.isNotEmpty) {
-        _queue.insert(0, _currentEpisode!);
-      }
-
-      // If we are attempting to play an episode that is also in the queue, remove it from the queue.
-      _queue.removeWhere((e) => episode.guid == e.guid);
-
       // Current episode is saved. Now we re-point the current episode to the new one passed in.
       _currentEpisode = episode;
       _currentEpisode!.played = false;
@@ -521,16 +512,15 @@ class DefaultAudioPlayerService extends AudioPlayerService {
   Future<void> _makeQueue(Episode? currentEpisode) async {
     var episodes = await podcastService.loadEpisodes();
     episodes.sort((a, b) =>
-        a.publicationDate!.millisecondsSinceEpoch -
-        b.publicationDate!.millisecondsSinceEpoch);
+        (a.publicationDate?.millisecondsSinceEpoch ?? 0) -
+        (b.publicationDate?.millisecondsSinceEpoch ?? 0));
 
     _queue = [];
 
-    var currentEpisodePublished = currentEpisode!.publicationDate == null
-        ? 0
-        : currentEpisode.publicationDate!.millisecondsSinceEpoch;
+    var currentEpisodePublished =
+        currentEpisode?.publicationDate?.millisecondsSinceEpoch ?? 0;
     for (var episode in episodes) {
-      if (episode.publicationDate!.millisecondsSinceEpoch >
+      if ((episode.publicationDate?.millisecondsSinceEpoch ?? 0) >
           currentEpisodePublished) {
         _queue.add(episode);
       }

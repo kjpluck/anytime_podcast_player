@@ -83,30 +83,6 @@ class _PodcastDetailsState extends State<PodcastDetails> {
         });
       }
     });
-
-    widget._podcastBloc.backgroundLoading.where((event) => event is BlocPopulatedState<void>).listen((event) {
-      if (mounted) {
-        /// If we have not scrolled (save a few pixels) just refresh the episode list;
-        /// otherwise prompt the user to prevent unexpected list jumping
-        if (_sliverScrollController.offset < 20) {
-          widget._podcastBloc.podcastEvent(PodcastEvent.refresh);
-        } else {
-          scaffoldMessengerKey.currentState!.showSnackBar(SnackBar(
-            content: Text(L.of(context)!.new_episodes_label),
-            behavior: SnackBarBehavior.floating,
-            action: SnackBarAction(
-              label: L.of(context)!.new_episodes_view_now_label,
-              onPressed: () {
-                _sliverScrollController.animateTo(100,
-                    duration: const Duration(milliseconds: 500), curve: Curves.easeInOut);
-                widget._podcastBloc.podcastEvent(PodcastEvent.refresh);
-              },
-            ),
-            duration: const Duration(seconds: 5),
-          ));
-        }
-      }
-    });
   }
 
   @override
@@ -415,7 +391,7 @@ class _PodcastTitleState extends State<PodcastTitle> with SingleTickerProviderSt
     );
 
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      if (descriptionKey.currentContext!.size!.height == maxHeight) {
+      if (descriptionKey.currentContext?.size?.height == maxHeight) {
         setState(() {
           showOverflow = true;
         });

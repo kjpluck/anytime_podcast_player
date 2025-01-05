@@ -250,8 +250,13 @@ class MobilePodcastService extends PodcastService {
       // Enforce that ordering. To prevent unnecessary sorting, we'll sample the
       // first two episodes to see what order they are in.
       if (loadedPodcast.episodes.length > 1) {
-        if (loadedPodcast.episodes[0].publicationDate!.millisecondsSinceEpoch <
-            loadedPodcast.episodes[1].publicationDate!.millisecondsSinceEpoch) {
+        final firstTime =
+            loadedPodcast.episodes[0].publicationDate?.millisecondsSinceEpoch ??
+                0;
+        final secondTime =
+            loadedPodcast.episodes[1].publicationDate?.millisecondsSinceEpoch ??
+                0;
+        if (firstTime < secondTime) {
           loadedPodcast.episodes.sort((e1, e2) => e2.publicationDate!.compareTo(e1.publicationDate!));
         }
       }
@@ -595,15 +600,14 @@ class MobilePodcastService extends PodcastService {
       // Update queue
       final episodes = await loadEpisodes();
       episodes.sort((a, b) =>
-          a.publicationDate!.millisecondsSinceEpoch -
-          b.publicationDate!.millisecondsSinceEpoch);
+          (a.publicationDate?.millisecondsSinceEpoch ?? 0) -
+          (b.publicationDate?.millisecondsSinceEpoch ?? 0));
 
       final List<Episode> queue = [];
-      final currentEpisodePublished = currentlyPlaying == null
-          ? 0
-          : currentlyPlaying.publicationDate!.microsecondsSinceEpoch;
+      final currentEpisodePublished =
+          currentlyPlaying?.publicationDate?.millisecondsSinceEpoch ?? 0;
       for (final episode in episodes) {
-        if (episode.publicationDate!.millisecondsSinceEpoch >
+        if ((episode.publicationDate?.millisecondsSinceEpoch ?? 0) >
             currentEpisodePublished) {
           queue.add(episode);
         }
