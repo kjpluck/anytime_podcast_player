@@ -53,27 +53,18 @@ class _EpisodesState extends State<Episodes> {
           );
         } else {
           if (state is BlocLoadingState) {
-            return const SliverFillRemaining(
-              hasScrollBody: false,
-              child: Column(
+            return const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
                   PlatformProgressIndicator(),
-                ],
-              ),
+              ],
             );
           } else if (state is BlocErrorState) {
-            return const SliverFillRemaining(
-              hasScrollBody: false,
-              child: Text('ERROR'),
-            );
+            return const Text('ERROR');
           }
 
-          return SliverFillRemaining(
-            hasScrollBody: false,
-            child: Container(),
-          );
+          return Container();
         }
       },
     );

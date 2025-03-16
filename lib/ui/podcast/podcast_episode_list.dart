@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:anytime/bloc/podcast/podcast_bloc.dart';
 import 'package:anytime/bloc/podcast/queue_bloc.dart';
 import 'package:anytime/entities/episode.dart';
 import 'package:anytime/state/queue_event_state.dart';
 import 'package:anytime/ui/widgets/episode_tile.dart';
 import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
 import 'package:provider/provider.dart';
 
 class PodcastEpisodeList extends StatelessWidget {
@@ -29,15 +31,17 @@ class PodcastEpisodeList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final PodcastBloc podcastBloc = Provider.of<PodcastBloc>(context);
+    final log = Logger('Episode list');
     if (episodes != null && episodes!.isNotEmpty) {
       var queueBloc = Provider.of<QueueBloc>(context);
 
       return StreamBuilder<QueueState>(
           stream: queueBloc.queue,
           builder: (context, snapshot) {
-            return SliverList(
-                delegate: SliverChildBuilderDelegate(
-              (BuildContext context, int index) {
+            return RefreshIndicator(
+                child: ListView.builder(
+                  itemBuilder: (context, index) {
                 var queued = false;
                 var playing = false;
                 var episode = episodes![index]!;
@@ -63,14 +67,15 @@ class PodcastEpisodeList extends StatelessWidget {
                   queued: queued,
                 );
               },
-              childCount: episodes!.length,
-              addAutomaticKeepAlives: false,
-            ));
+                  itemCount: episodes!.length,
+                ),
+                onRefresh: () async {
+                  log.fine('REFRESHED!');
+                  podcastBloc.refreshAllPodcasts(null);
+                });
           });
     } else {
-      return SliverFillRemaining(
-        hasScrollBody: false,
-        child: Padding(
+      return Padding(
           padding: const EdgeInsets.all(32.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -86,8 +91,7 @@ class PodcastEpisodeList extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleLarge,
                 textAlign: TextAlign.center,
               ),
-            ],
-          ),
+          ],
         ),
       );
     }

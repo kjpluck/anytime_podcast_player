@@ -48,6 +48,8 @@ class PodcastBloc extends Bloc {
   final DownloadService downloadService;
   final SettingsService settingsService;
   final BehaviorSubject<Feed> _podcastFeed = BehaviorSubject<Feed>(sync: true);
+  final BehaviorSubject<void> _refreshAllPodcasts =
+      BehaviorSubject<void>(sync: true);
 
   /// Add to sink to start an Episode download
   final PublishSubject<Episode?> _downloadEpisode = PublishSubject<Episode?>();
@@ -67,7 +69,7 @@ class PodcastBloc extends Bloc {
 
   Podcast? _podcast;
   List<Episode> _episodes = <Episode>[];
-  late Feed lastFeed;
+  //late Feed lastFeed;
   bool first = true;
 
   PodcastBloc({
@@ -85,6 +87,8 @@ class PodcastBloc extends Bloc {
 
     /// When we receive a load podcast request, send back a BlocState.
     _listenPodcastLoad();
+
+    _listenRefreshAllPodcasts();
 
     /// Listen to an Episode download request
     _listenDownloadRequest();
@@ -107,7 +111,7 @@ class PodcastBloc extends Bloc {
   void _listenPodcastLoad() async {
     _podcastFeed.listen((feed) async {
       var silent = false;
-      lastFeed = feed;
+      //lastFeed = feed;
 
       _episodes = [];
 
@@ -130,11 +134,28 @@ class PodcastBloc extends Bloc {
         _backgroundLoadStream.sink.add(BlocDefaultState<void>());
 
         // For now we'll assume a network error as this is the most likely.
-        if ((_podcast == null || lastFeed.podcast.url == _podcast!.url) && !silent) {
+        if (!silent) {
           _podcastStream.sink.add(BlocErrorState<Podcast>());
           log.fine('Error loading podcast', e);
           log.fine(e);
         }
+      }
+    });
+  }
+
+  void _listenRefreshAllPodcasts() async {
+    _refreshAllPodcasts.listen((_) async {
+      try {
+        final podcasts = await podcastService.subscriptions();
+
+        for (var podcast in podcasts) {
+          final feed = Feed(podcast: podcast, refresh: true);
+          _loadEpisodes(feed, true).then((_) {
+            _loadNewEpisodes(feed);
+          });
+        }
+      } catch (e) {
+        log.fine('Error loading podcast', e);
       }
     });
   }
@@ -170,11 +191,11 @@ class PodcastBloc extends Bloc {
     /// Only populate episodes if the ID we started the load with is the
     /// same as the one we have ended up with.
     if (_podcast != null && _podcast?.url != null) {
-      if (lastFeed.podcast.url == _podcast!.url) {
+      //if (lastFeed.podcast.url == _podcast!.url) {
         _episodes = _podcast!.episodes;
 
         _podcastStream.sink.add(BlocPopulatedState<Podcast>(results: _podcast));
-      }
+      //}
     }
   }
 
@@ -187,7 +208,8 @@ class PodcastBloc extends Bloc {
 
     /// Only populate episodes if the ID we started the load with is the
     /// same as the one we have ended up with.
-    if (_podcast != null && lastFeed.podcast.url == _podcast!.url) {
+    if (_podcast != null) {
+      //} && lastFeed.podcast.url == _podcast!.url) {
       _episodes = _podcast!.episodes;
 
       if (_podcast!.newEpisodes) {
@@ -365,6 +387,7 @@ class PodcastBloc extends Bloc {
   @override
   void dispose() {
     _podcastFeed.close();
+    _refreshAllPodcasts.close();
     _downloadEpisode.close();
     _subscriptions.close();
     _podcastStream.close();
@@ -376,6 +399,7 @@ class PodcastBloc extends Bloc {
 
   /// Sink to load a podcast.
   void Function(Feed) get load => _podcastFeed.add;
+  void Function(void event) get refreshAllPodcasts => _refreshAllPodcasts.add;
 
   /// Sink to trigger an episode download.
   void Function(Episode?) get downloadEpisode => _downloadEpisode.add;

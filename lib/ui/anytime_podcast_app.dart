@@ -14,7 +14,6 @@ import 'package:anytime/bloc/podcast/podcast_bloc.dart';
 import 'package:anytime/bloc/podcast/queue_bloc.dart';
 import 'package:anytime/bloc/search/search_bloc.dart';
 import 'package:anytime/bloc/settings/settings_bloc.dart';
-import 'package:anytime/bloc/ui/pager_bloc.dart';
 import 'package:anytime/core/environment.dart';
 import 'package:anytime/entities/feed.dart';
 import 'package:anytime/entities/podcast.dart';
@@ -168,10 +167,6 @@ class AnytimePodcastAppState extends State<AnytimePodcastApp> {
               settingsService: widget.mobileSettingsService),
           dispose: (_, value) => value.dispose(),
         ),
-        Provider<PagerBloc>(
-          create: (_) => PagerBloc(),
-          dispose: (_, value) => value.dispose(),
-        ),
         Provider<AudioBloc>(
           create: (_) =>
               AudioBloc(audioPlayerService: widget.audioPlayerService),
@@ -220,12 +215,10 @@ class AnytimePodcastAppState extends State<AnytimePodcastApp> {
 
 class AnytimeHomePage extends StatefulWidget {
   final String? title;
-  final bool topBarVisible;
 
   const AnytimeHomePage({
     super.key,
     this.title,
-    this.topBarVisible = true,
   });
 
   @override
@@ -334,24 +327,28 @@ class _AnytimeHomePageState extends State<AnytimeHomePage>
     }
   }
 
+  int _selectedIndex = 0;
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+      
   @override
   Widget build(BuildContext context) {
-    final pager = Provider.of<PagerBloc>(context);
     final searchBloc = Provider.of<EpisodeBloc>(context);
     final backgroundColour = Theme.of(context).scaffoldBackgroundColor;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: Theme.of(context).appBarTheme.systemOverlayStyle!,
       child: Scaffold(
-        backgroundColor: backgroundColour,
-        body: Column(
-          children: <Widget>[
+          backgroundColor: backgroundColour,
+          body: Column(children: <Widget>[
             Expanded(
-              child: CustomScrollView(
-                slivers: <Widget>[
-                  SliverVisibility(
-                    visible: widget.topBarVisible,
-                    sliver: SliverAppBar(
+              child: NestedScrollView(
+                headerSliverBuilder: (context, innerBoxIsScrolled) {
+                  return [
+                    SliverAppBar(
                       title: ExcludeSemantics(
                         child: TitleWidget(),
                       ),
@@ -470,63 +467,46 @@ class _AnytimeHomePageState extends State<AnytimeHomePage>
                           },
                         ),
                       ],
-                    ),
-                  ),
-                  StreamBuilder<int>(
-                      stream: pager.currentPage,
-                      builder:
-                          (BuildContext context, AsyncSnapshot<int> snapshot) {
-                        return _fragment(snapshot.data, searchBloc);
-                      }),
-                ],
+                    )
+                  ];
+                },
+                body: _fragment(_selectedIndex, searchBloc),
               ),
             ),
             const MiniPlayer(),
-          ],
-        ),
-        bottomNavigationBar: StreamBuilder<int>(
-            stream: pager.currentPage,
-            initialData: 0,
-            builder: (BuildContext context, AsyncSnapshot<int> snapshot) {
-              int index = snapshot.data ?? 0;
-
-              return BottomNavigationBar(
-                type: BottomNavigationBarType.fixed,
-                backgroundColor: Theme.of(context).bottomAppBarTheme.color,
-                selectedIconTheme: Theme.of(context).iconTheme,
-                selectedItemColor: Theme.of(context).iconTheme.color,
-                selectedFontSize: 11.0,
-                unselectedFontSize: 11.0,
-                unselectedItemColor: HSLColor.fromColor(
-                        Theme.of(context).bottomAppBarTheme.color!)
+          ]),
+          bottomNavigationBar: BottomNavigationBar(
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: Theme.of(context).bottomAppBarTheme.color,
+            selectedIconTheme: Theme.of(context).iconTheme,
+            selectedItemColor: Theme.of(context).iconTheme.color,
+            selectedFontSize: 11.0,
+            unselectedFontSize: 11.0,
+            unselectedItemColor:
+                HSLColor.fromColor(Theme.of(context).bottomAppBarTheme.color!)
                     .withLightness(0.8)
                     .toColor(),
-                currentIndex: index,
-                onTap: pager.changePage,
-                items: <BottomNavigationBarItem>[
-                  BottomNavigationBarItem(
-                    icon: index == 0
-                        ? const Icon(Icons.library_music)
-                        : const Icon(Icons.library_music_outlined),
-                    label: L.of(context)!.library,
-                  ),
-                  // To be fleshed out later.
-                  BottomNavigationBarItem(
-                    icon: index == 1
-                        ? const Icon(Icons.article_rounded)
-                        : const Icon(Icons.article_outlined),
-                    label: 'Episodes',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: index == 2
-                        ? const Icon(Icons.explore)
-                        : const Icon(Icons.explore_outlined),
-                    label: L.of(context)!.discover,
-                  ),
-                ],
-              );
-            }),
-      ),
+            currentIndex: _selectedIndex,
+            onTap: _onItemTapped,
+            items: <BottomNavigationBarItem>[
+              BottomNavigationBarItem(
+                activeIcon: const Icon(Icons.library_music),
+                icon: const Icon(Icons.library_music_outlined),
+                label: L.of(context)!.library,
+              ),
+              // To be fleshed out later.
+              const BottomNavigationBarItem(
+                activeIcon: Icon(Icons.article_rounded),
+                icon: Icon(Icons.article_outlined),
+                label: 'Episodes',
+              ),
+              BottomNavigationBarItem(
+                activeIcon: const Icon(Icons.explore),
+                icon: const Icon(Icons.explore_outlined),
+                label: L.of(context)!.discover,
+              ),
+            ],
+          )),
     );
   }
 
@@ -539,7 +519,7 @@ class _AnytimeHomePageState extends State<AnytimeHomePage>
       return const Discovery(
         categories: true,
       );
-    } 
+    }
   }
 
   void _menuSelect(String choice) async {
